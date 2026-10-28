@@ -1,597 +1,334 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visor Monocular y Escáner de Campo - 22 Aves Locales</title>
-
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- jsQR Library for High Reliability Real-Time Scanning -->
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        patagonia: {
-                            50: '#f3f7f0',
-                            100: '#e1ebd8',
-                            200: '#c5d9b5',
-                            600: '#517a37',
-                            700: '#3d5c28',
-                            800: '#2a401a',
-                            900: '#19280f',
-                        },
-                        amberGold: '#f59e0b',
-                    },
-                    fontFamily: {
-                        sans: ['Plus Jakarta Sans', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-
-    <style>
-        /* Monocular Viewport Mask */
-        .monocular-mask {
-            background: radial-gradient(circle at 50% 50%, transparent 48%, rgba(10, 18, 8, 0.94) 52%);
-        }
-
-        /* Scan reticle animation */
-        .reticle-scan {
-            box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6);
-            animation: pulse-border 2s infinite ease-in-out;
-        }
-        @keyframes pulse-border {
-            0%, 100% { border-color: rgba(245, 158, 11, 0.4); }
-            50% { border-color: rgba(245, 158, 11, 1); }
-        }
-
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            #print-area, #print-area * {
-                visibility: visible;
-            }
-            #print-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aves Locales - Visor WebAR y Recorrido de Estaciones</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .viewport-overlay {
+      background: radial-gradient(circle, transparent 60%, rgba(0,0,0,0.4) 100%);
+    }
+    .scan-line {
+      animation: scan 2s linear infinite;
+    }
+    @keyframes scan {
+      0% { top: 10%; opacity: 0.8; }
+      50% { top: 90%; opacity: 0.8; }
+      100% { top: 10%; opacity: 0.8; }
+    }
+  </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-slate-900">
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen flex flex-col">
 
-    <!-- HEADER / NAVIGATION -->
-    <header class="bg-patagonia-900/90 border-b border-patagonia-700/50 sticky top-0 z-40 backdrop-blur-md">
-        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('scanner')">
-                <div class="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-extrabold shadow-lg shadow-amber-500/20">
-                    <i class="fa-solid fa-eye text-lg"></i>
-                </div>
-                <div>
-                    <h1 class="font-extrabold text-base sm:text-lg leading-tight text-white">EcoAves Monocular</h1>
-                    <p class="text-[11px] text-patagonia-200">22 Especies &bull; Recorrido con Marcadores</p>
-                </div>
-            </div>
-
-            <nav class="flex items-center space-x-1 sm:space-x-2">
-                <button onclick="switchTab('scanner')" id="nav-scanner" class="px-3 py-2 rounded-xl text-xs font-bold transition bg-patagonia-700 text-white border border-patagonia-600 shadow">
-                    <i class="fa-solid fa-binoculars mr-1 text-amber-400"></i> Visor Monocular
-                </button>
-                <button onclick="switchTab('album')" id="nav-album" class="px-3 py-2 rounded-xl text-xs font-bold transition hover:bg-patagonia-800 text-patagonia-100 flex items-center">
-                    <i class="fa-solid fa-book-open mr-1 text-emerald-400"></i>
-                    <span>Álbum</span>
-                    <span id="album-badge" class="ml-1 bg-amber-500 text-slate-950 font-black text-[10px] px-1.5 py-0.2 rounded-full">0/22</span>
-                </button>
-                <button onclick="openPrintStudio()" class="px-3 py-2 rounded-xl text-xs font-bold transition bg-white/10 hover:bg-white/20 text-white border border-white/20">
-                    <i class="fa-solid fa-print text-sky-400"></i>
-                </button>
-            </nav>
-        </div>
-    </header>
-
-    <!-- MAIN CONTAINER -->
-    <main class="flex-grow max-w-7xl w-full mx-auto px-2 sm:px-6 lg:px-8 py-4">
-
-        <!-- TAB 1: VISOR MONOCULAR DE CAMPO + ESCÁNER -->
-        <section id="tab-scanner" class="space-y-4">
-            
-            <!-- Controls Bar -->
-            <div class="bg-slate-800/80 p-3 sm:p-4 rounded-2xl border border-slate-700/80 backdrop-blur-md flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="text-sm font-bold text-white flex items-center">
-                            <i class="fa-solid fa-expand text-amber-400 mr-2"></i> Escáner Monocular en Vivo
-                        </h2>
-                        <p class="text-[11px] text-slate-400">Enfoca el marcador impreso en el poste para identificar el ave y reproducir su canto.</p>
-                    </div>
-                </div>
-
-                <div class="flex flex-wrap items-center gap-2">
-                    <button id="cam-toggle-btn" onclick="toggleCamera()" class="px-3.5 py-2 bg-patagonia-700 hover:bg-patagonia-600 text-white font-bold text-xs rounded-xl shadow transition flex items-center">
-                        <i class="fa-solid fa-camera mr-1.5"></i> Activar Cámara
-                    </button>
-                    
-                    <!-- Manual / Override selector in case of bad light -->
-                    <div class="flex-1 sm:flex-none min-w-[200px]">
-                        <select id="manual-bird-select" onchange="manualDetectBird(this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-400 text-xs font-bold px-3 py-2 rounded-xl focus:ring-2 focus:ring-amber-500">
-                            <option value="">-- Selección Manual de Tarjeta --</option>
-                            <!-- Dynamically loaded with 22 species -->
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- MONOCULAR CAMERA HUD VIEWPORT -->
-            <div class="relative w-full h-[540px] sm:h-[600px] bg-black rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl flex items-center justify-center">
-                
-                <!-- Hidden Canvas for Scanner Processing -->
-                <canvas id="qr-canvas" class="hidden"></canvas>
-                
-                <!-- Live Camera Feed -->
-                <video id="camera-feed" class="absolute inset-0 w-full h-full object-cover hidden" playsinline autoplay muted></video>
-
-                <!-- Fallback Background when Camera is Off -->
-                <div id="camera-fallback" class="absolute inset-0 bg-gradient-to-b from-slate-950 via-slate-900 to-patagonia-950 flex flex-col items-center justify-center p-6 text-center">
-                    <div class="w-20 h-20 rounded-full bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-center mb-4 text-amber-400 text-3xl animate-pulse">
-                        <i class="fa-solid fa-binoculars"></i>
-                    </div>
-                    <h3 class="text-lg font-bold text-white mb-1">Visor Monocular Inactivo</h3>
-                    <p class="text-xs text-slate-400 max-w-sm mb-4">Presiona "Activar Cámara" para escanear marcadores en el recorrido o utiliza la selección manual rápida.</p>
-                    <button onclick="toggleCamera()" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl shadow-lg transition">
-                        Encender Cámara de Campo
-                    </button>
-                </div>
-
-                <!-- HUD MONOCULAR OVERLAY -->
-                <div class="absolute inset-0 pointer-events-none monocular-mask z-10 flex flex-col justify-between p-4 sm:p-6">
-                    
-                    <!-- HUD Top Stats -->
-                    <div class="flex items-center justify-between text-[11px] font-mono text-emerald-400 bg-slate-950/70 backdrop-blur-md p-2.5 rounded-xl border border-emerald-500/20">
-                        <span class="flex items-center"><i class="fa-solid fa-compass text-amber-400 mr-1.5 animate-spin"></i> BRÚJULA: <strong class="ml-1 text-white" id="hud-heading">184° S</strong></span>
-                        <span id="hud-status" class="text-amber-400 font-bold"><i class="fa-solid fa-circle text-[8px] mr-1 text-red-500 animate-ping"></i> LISTO PARA ESCANEAR</span>
-                    </div>
-
-                    <!-- Monocular Target Reticle -->
-                    <div class="self-center my-auto relative w-56 h-56 sm:w-64 sm:h-64 border-2 rounded-full border-amber-400/60 reticle-scan flex items-center justify-center">
-                        <div class="w-2 h-2 bg-amber-400 rounded-full"></div>
-                        <div class="absolute inset-0 border border-dashed border-white/20 rounded-full"></div>
-                        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 h-4 bg-amber-400"></div>
-                        <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-0.5 h-4 bg-amber-400"></div>
-                        <div class="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 w-4 bg-amber-400"></div>
-                        <div class="absolute right-0 top-1/2 -translate-y-1/2 h-0.5 w-4 bg-amber-400"></div>
-                    </div>
-
-                    <!-- HUD Bottom Sighting Notification -->
-                    <div id="hud-sighting-card" class="bg-slate-950/90 border border-slate-800 p-3 sm:p-4 rounded-2xl backdrop-blur-md flex items-center justify-between gap-3 pointer-events-auto">
-                        <div class="flex items-center space-x-3">
-                            <img id="hud-bird-thumb" src="https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=200&q=80" class="w-12 h-12 rounded-xl object-cover border border-amber-400">
-                            <div>
-                                <h4 id="hud-bird-name" class="font-bold text-white text-sm sm:text-base">Apunta a un marcador</h4>
-                                <p id="hud-bird-sub" class="text-[11px] text-slate-400 italic">22 Marcadores disponibles</p>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center space-x-2">
-                            <button id="btn-quick-audio" onclick="playActiveBirdAudio()" class="p-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shadow transition flex items-center">
-                                <i class="fa-solid fa-volume-high text-sm sm:mr-1"></i> <span class="hidden sm:inline">Canto</span>
-                            </button>
-                            <button id="btn-quick-tts" onclick="speakActiveBird()" class="p-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold text-xs shadow transition flex items-center">
-                                <i class="fa-solid fa-bullhorn text-sm sm:mr-1"></i> <span class="hidden sm:inline">Relato</span>
-                            </button>
-                        </div>
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-        <!-- TAB 2: ÁLBUM / LISTA DE VIDA (22 ESPECIES) -->
-        <section id="tab-album" class="hidden space-y-4">
-            
-            <div class="bg-slate-800/80 p-5 rounded-2xl border border-slate-700/80 backdrop-blur-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h2 class="text-xl font-bold text-white flex items-center">
-                        <i class="fa-solid fa-book-open text-emerald-400 mr-2"></i> Álbum de Avistamientos
-                    </h2>
-                    <p class="text-xs text-slate-400">Lista completa de las 22 aves locales. Se desbloquean al escanear su marcador en terreno.</p>
-                </div>
-
-                <div class="bg-slate-900 border border-slate-700 px-4 py-3 rounded-xl flex items-center space-x-4">
-                    <div>
-                        <span class="text-[11px] text-slate-400 block font-semibold">Progreso del Recorrido</span>
-                        <span id="album-progress-text" class="text-base font-extrabold text-amber-400">0 / 22 Avistadas</span>
-                    </div>
-                    <button onclick="resetSightings()" class="px-2.5 py-1 bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 rounded-lg text-[11px] font-bold transition">
-                        Reiniciar
-                    </button>
-                </div>
-            </div>
-
-            <!-- Species Grid (22 Cards) -->
-            <div id="species-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                <!-- Dynamically populated JS -->
-            </div>
-
-        </section>
-
-    </main>
-
-    <!-- PRINT STUDIO MODAL (GENERA LOS 22 MARCADORES IMPRESIBLES) -->
-    <div id="print-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative text-slate-100">
-            <button onclick="closePrintStudio()" class="absolute top-5 right-5 text-slate-400 hover:text-white bg-slate-800 w-8 h-8 rounded-full flex items-center justify-center">
-                <i class="fa-solid fa-xmark text-lg"></i>
-            </button>
-
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 pr-8">
-                <div>
-                    <h3 class="text-xl font-bold text-white">Generador de Marcadores para Sendero (22 Aves)</h3>
-                    <p class="text-xs text-slate-400">Imprime estos marcadores de alto contraste para pegar en postes, árboles o tarjetas de campo.</p>
-                </div>
-                <button onclick="window.print()" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold rounded-xl shadow transition flex items-center">
-                    <i class="fa-solid fa-print mr-2"></i> Imprimir Todo
-                </button>
-            </div>
-
-            <!-- PRINTABLE CARDS CONTAINER -->
-            <div id="print-area" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 pt-2">
-                <!-- Generated dynamically with high contrast QR codes -->
-            </div>
-        </div>
+  <!-- Header -->
+  <header class="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-50 flex justify-between items-center shadow-lg">
+    <div class="flex items-center gap-3">
+      <i class="fa-solid font-bold fa-feather-pointed text-amber-400 text-2xl"></i>
+      <div>
+        <h1 class="text-xl font-bold tracking-wide text-amber-400">Aves Locales AR</h1>
+        <p class="text-xs text-slate-400">Recorrido de avistamiento y cantos (.PNG)</p>
+      </div>
     </div>
-
-    <!-- BIRD DETAIL MODAL -->
-    <div id="detail-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl relative text-slate-100">
-            <button onclick="closeDetailModal()" class="absolute top-4 right-4 bg-slate-950/80 text-white w-9 h-9 rounded-full flex items-center justify-center z-10">
-                <i class="fa-solid fa-xmark text-lg"></i>
-            </button>
-
-            <div class="relative h-56 w-full">
-                <img id="detail-img" src="" class="w-full h-full object-cover">
-                <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
-                <div class="absolute bottom-3 left-4 right-4">
-                    <span id="detail-id" class="px-2 py-0.5 bg-amber-500 text-slate-950 text-[10px] font-extrabold rounded">AVE</span>
-                    <h3 id="detail-title" class="text-xl font-extrabold text-white mt-1">Nombre</h3>
-                    <p id="detail-scientific" class="text-slate-300 italic text-xs">Científico</p>
-                </div>
-            </div>
-
-            <div class="p-5 space-y-4">
-                <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                    <span class="text-[11px] font-bold text-amber-400 block mb-2"><i class="fa-solid fa-music mr-1"></i> Canto Registrado</span>
-                    <button onclick="playActiveBirdAudio()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center">
-                        <i class="fa-solid fa-play mr-2"></i> Reproducir Canto del Ave
-                    </button>
-                </div>
-
-                <div>
-                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Descripción de Campo</h4>
-                    <p id="detail-desc" class="text-slate-300 text-xs leading-relaxed"></p>
-                </div>
-
-                <div class="pt-2 border-t border-slate-800 flex gap-2">
-                    <button onclick="speakActiveBird()" class="flex-1 py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs rounded-xl transition flex items-center justify-center">
-                        <i class="fa-solid fa-bullhorn mr-2"></i> Voz sintetizada (TTS)
-                    </button>
-                </div>
-            </div>
-        </div>
+    <div class="flex gap-2">
+      <button id="btn-camera-tab" onclick="switchTab('camera')" class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold rounded-lg text-sm flex items-center gap-2 transition">
+        <i class="fa-solid fa-camera"></i> <span class="hidden sm:inline">Visor AR</span>
+      </button>
+      <button id="btn-album-tab" onclick="switchTab('album')" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-lg text-sm flex items-center gap-2 transition">
+        <i class="fa-solid fa-book-open"></i> <span class="hidden sm:inline">Lista de Vida</span>
+      </button>
     </div>
+  </header>
 
-    <!-- JAVASCRIPT LOGIC -->
-    <script>
-        // Database of all 22 local species matching the user's directory
-        const birdSpecies = [
-            { id: "benteveo", name: "Benteveo", scientific: "Pitangus sulphuratus", image: "https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=600&q=80", desc: "Ave de llamativo vientre amarillo, garganta blanca y antifaz negro. Posee un canto trino muy potente y característico." },
-            { id: "cabecitanegra", name: "Cabecitanegra", scientific: "Spinus magellanicus", image: "https://images.unsplash.com/photo-1520808663317-647b476a81b9?auto=format&fit=crop&w=600&q=80", desc: "Pequeño passeriforme inquieto. El macho presenta la cabeza totalmente negra y un plumaje cuerpo amarillo verdoso brillante." },
-            { id: "calandria-grande", name: "Calandria Grande", scientific: "Mimus saturninus", image: "https://images.unsplash.com/photo-1544985397-124e397558ec?auto=format&fit=crop&w=600&q=80", desc: "Famosa por su gran capacidad de imitar el canto de otras aves y sonidos ambientales. De cuerpo esbelto y cola larga." },
-            { id: "chimango", name: "Chimango", scientific: "Milvago chimango", image: "https://images.unsplash.com/photo-1618218168350-6e7c81151b64?auto=format&fit=crop&w=600&q=80", desc: "Raptor oportunista y muy común. De plumaje castaño parduzco y manchas claras debajo de las alas cuando vuela." },
-            { id: "chingolo", name: "Chingolo", scientific: "Zonotrichia capensis", image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80", desc: "Pequeño gorrión nativo con un distinguido copete gris y un collarín rufus/rojizo al cuello. Su canto de 3 notas es inconfundible." },
-            { id: "cotorra", name: "Cotorra", scientific: "Myiopsitta monachus", image: "https://images.unsplash.com/photo-1539664030488-bed650c33a92?auto=format&fit=crop&w=600&q=80", desc: "Loro de color verde brillante con pecho grisáceo. Construye imponentes nidos comunales de ramas en árboles altos." },
-            { id: "golondrina-parda", name: "Golondrina Parda", scientific: "Progne tapera", image: "https://images.unsplash.com/photo-1522921820582-385ee29d0c32?auto=format&fit=crop&w=600&q=80", desc: "Golondrina de dorso pardo y pecho con faja oscura. Vuelo ágil capturando insectos en el aire." },
-            { id: "golondrina-patagonica", name: "Golondrina Patagónica", scientific: "Tachycineta leucopyga", image: "https://images.unsplash.com/photo-1444464666168-49d633b86797?auto=format&fit=crop&w=600&q=80", desc: "Lomo azul metálico brillante, vientre blanco puro y rabadilla blanca. Migratoria estival en la zona sur." },
-            { id: "golondrina-tijerita", name: "Golondrina Tijerita", scientific: "Hirundo rustica", image: "https://images.unsplash.com/photo-1506220926022-cd5c17540f0a?auto=format&fit=crop&w=600&q=80", desc: "Característica cola bifurcada en forma de tijera profundamente ahorquillada. Frente y garganta canela rojizo." },
-            { id: "gorrion", name: "Gorrión", scientific: "Passer domesticus", image: "https://images.unsplash.com/photo-1555169062-013468b47731?auto=format&fit=crop&w=600&q=80", desc: "Especie introducida adaptada a poblados y granjas. El macho exhibe una babera negra sobre el pecho." },
-            { id: "hornero", name: "Hornero", scientific: "Furnarius rufus", image: "https://images.unsplash.com/photo-1516582149528-762d974c7075?auto=format&fit=crop&w=600&q=80", desc: "Ave nacional conocida por edificar sólidos nidos de barro con forma de horno de barro junto a su pareja." },
-            { id: "jilguero-dorado", name: "Jilguero Dorado", scientific: "Sicalis flaveola", image: "https://images.unsplash.com/photo-1452570053594-1b985d6ea890?auto=format&fit=crop&w=600&q=80", desc: "Macho teñido de un deslumbrante amarillo dorado con frente anaranjada. Canto alegre y melódico." },
-            { id: "loica", name: "Loica", scientific: "Leistes loyca", image: "https://images.unsplash.com/photo-1520808663317-647b476a81b9?auto=format&fit=crop&w=600&q=80", desc: "Pecho rojo intenso muy llamativo. Se posa en pastizales, arbustos y postes para entonar su trino." },
-            { id: "loro-barranquero", name: "Loro Barranquero", scientific: "Cyanoliseus patagonus", image: "https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=600&q=80", desc: "Loro sociable de gran tamaño, plumaje oliváceo con abdomen rojo y amarillo. Anida en grandes colonias en barrancas." },
-            { id: "naranjero", name: "Naranjero", scientific: "Rauenia bonariensis", image: "https://images.unsplash.com/photo-1544985397-124e397558ec?auto=format&fit=crop&w=600&q=80", desc: "Hermosa combinación de cabeza azul, lomo negro y vientre amarillo anaranjado intenso." },
-            { id: "paloma-manchada", name: "Paloma Manchada", scientific: "Patagioenas maculosa", image: "https://images.unsplash.com/photo-1516582149528-762d974c7075?auto=format&fit=crop&w=600&q=80", desc: "Paloma de mayor tamaño con pequitas claras en las cubiertas de las alas. Ojo claro característico." },
-            { id: "paloma-picazuro", name: "Paloma Picazuró", scientific: "Patagioenas picazuro", image: "https://images.unsplash.com/photo-1618218168350-6e7c81151b64?auto=format&fit=crop&w=600&q=80", desc: "Gran paloma de tonalidades purpúreas y un patrón fileteado blanco en la nuca estilo filete." },
-            { id: "ratona", name: "Ratona Común", scientific: "Troglodytes aedon", image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=600&q=80", desc: "Inquieta ave diminuta de cola erguida. Se mueve velozmente entre matorrales emitiendo un potente canto potente." },
-            { id: "tero", name: "Tero", scientific: "Vanellus chilensis", image: "https://images.unsplash.com/photo-1520808663317-647b476a81b9?auto=format&fit=crop&w=600&q=80", desc: "Guardián de los campos. Plumaje gris con negro, espolones rojos en las alas y un canto de alarma estridente." },
-            { id: "torcaza", name: "Torcaza", scientific: "Zenaida auriculata", image: "https://images.unsplash.com/photo-1516582149528-762d974c7075?auto=format&fit=crop&w=600&q=80", desc: "La paloma más pequeña y abundante de los campos. Mancha negra detrás del ojo y reflejos dorados al cuello." },
-            { id: "tordo-renegado", name: "Tordo Renegado", scientific: "Molothrus bonariensis", image: "https://images.unsplash.com/photo-1555169062-013468b47731?auto=format&fit=crop&w=600&q=80", desc: "Macho con plumaje negro con reflejos violáceos iridiscentes. Parasita nidos de otras especies como el chingolo." },
-            { id: "zorzal-patagonico", name: "Zorzal Patagónico", scientific: "Turdus falcklandii", image: "https://images.unsplash.com/photo-1544985397-124e397558ec?auto=format&fit=crop&w=600&q=80", desc: "Pico y patas amarillo anaranjado vivo. Cabeza oscura y vientre ocre. Habitante común de bosques y jardines." }
-        ];
+  <!-- Main Content -->
+  <main class="flex-1 relative flex flex-col items-center justify-center p-2 sm:p-4">
 
-        let activeBirdIndex = 0;
-        let unlockedSightings = JSON.parse(localStorage.getItem('ecoaves_v2_sightings') || '[]');
-        let isCameraActive = false;
-        let videoStream = null;
-        let scanAnimFrame = null;
+    <!-- TAB 1: VISOR MONOCULAR DE CÁMARA / ESCÁNER -->
+    <section id="tab-camera" class="w-full max-w-2xl flex flex-col items-center gap-4">
+      
+      <!-- Visor de la Cámara -->
+      <div class="relative w-full aspect-[3/4] sm:aspect-video bg-black rounded-2xl overflow-hidden border-2 border-amber-500/40 shadow-2xl flex items-center justify-center">
+        
+        <!-- Video Stream / QR Reader -->
+        <div id="reader" class="w-full h-full object-cover"></div>
+        
+        <!-- Máscara / Visor Monocular -->
+        <div class="absolute inset-0 pointer-events-none viewport-overlay flex flex-col justify-between p-4">
+          <div class="flex justify-between items-start text-xs text-amber-400/80 font-mono">
+            <div><i class="fa-solid fa-crosshairs"></i> VISOR MONOCULAR AR</div>
+            <div id="status-tag" class="bg-slate-900/80 px-2 py-1 rounded border border-amber-500/30">ESCANEAR TARJETA</div>
+          </div>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            populateManualSelect();
-            renderAlbumGrid();
-            updateSightingCard(0);
-        });
+          <!-- Línea de Escaneo Animada -->
+          <div id="scan-line" class="absolute left-4 right-4 h-0.5 bg-amber-400 shadow-[0_0_8px_#f59e0b] scan-line"></div>
 
-        // TAB SWITCHING
-        function switchTab(tab) {
-            document.getElementById('tab-scanner').classList.add('hidden');
-            document.getElementById('tab-album').classList.add('hidden');
-            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+          <div class="flex justify-between items-end text-xs text-amber-400/80 font-mono">
+            <div>MODO: TARJETAS PNG</div>
+            <div>STATION SCANNER v2.0</div>
+          </div>
+        </div>
 
-            document.getElementById('nav-scanner').className = tab === 'scanner' 
-                ? "px-3 py-2 rounded-xl text-xs font-bold transition bg-patagonia-700 text-white border border-patagonia-600 shadow" 
-                : "px-3 py-2 rounded-xl text-xs font-bold transition hover:bg-patagonia-800 text-patagonia-100 flex items-center";
+        <!-- Botón para Iniciar Cámara si no arrancó -->
+        <div id="start-cam-overlay" class="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center p-6 text-center gap-4 z-20">
+          <i class="fa-solid fa-camera-rotate text-5xl text-amber-400 animate-bounce"></i>
+          <h2 class="text-lg font-bold text-slate-200">Activar Visor Monocular</h2>
+          <p class="text-xs text-slate-400 max-w-xs">Permite el acceso a la cámara para identificar los marcadores de las aves en el recorrido.</p>
+          <button onclick="startCamera()" class="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl shadow-lg transition">
+            Iniciar Cámara
+          </button>
+        </div>
+      </div>
 
-            document.getElementById('nav-album').className = tab === 'album' 
-                ? "px-3 py-2 rounded-xl text-xs font-bold transition bg-patagonia-700 text-white border border-patagonia-600 shadow flex items-center" 
-                : "px-3 py-2 rounded-xl text-xs font-bold transition hover:bg-patagonia-800 text-patagonia-100 flex items-center";
+      <!-- Selector Manual de Respaldo por si hay poca luz -->
+      <div class="w-full bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col gap-2">
+        <label class="text-xs text-slate-400 font-semibold flex items-center gap-2">
+          <i class="fa-solid fa-hand-pointer text-amber-400"></i> ¿Dificultades para escanear? Seleccioná el ave manualmente:
+        </label>
+        <select id="bird-selector" onchange="selectBirdManual(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500">
+          <option value="">-- Seleccionar especie de la lista --</option>
+        </select>
+      </div>
+
+    </section>
+
+    <!-- TAB 2: LISTA DE VIDA / ÁLBUM DE AVISTAMIENTOS -->
+    <section id="tab-album" class="w-full max-w-4xl hidden flex-col gap-4">
+      <div class="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
+        <div>
+          <h2 class="text-lg font-bold text-amber-400">Progreso de Avistamiento</h2>
+          <p class="text-xs text-slate-400">Escaneá o seleccioná las tarjetas para completar tu lista.</p>
+        </div>
+        <div class="text-right">
+          <span id="album-counter" class="text-2xl font-black text-amber-400">0</span>
+          <span class="text-sm text-slate-400">/ 22</span>
+        </div>
+      </div>
+
+      <!-- Grilla de Tarjetas -->
+      <div id="birds-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <!-- Generado dinámicamente -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL / FICHA DEL AVE IDENTIFICADA -->
+  <div id="bird-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-amber-500/50 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col animate-in fade-in zoom-in duration-200">
+      
+      <!-- Modal Header / Imagen -->
+      <div class="relative bg-slate-950 p-4 flex items-center justify-center border-b border-slate-700">
+        <img id="modal-img" src="" alt="Ave" class="h-48 object-contain drop-shadow-md">
+        <button onclick="closeModal()" class="absolute top-3 right-3 bg-slate-800/80 hover:bg-slate-700 text-slate-300 w-8 h-8 rounded-full flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+        <span id="modal-tag" class="absolute bottom-3 left-3 bg-amber-500 text-slate-950 text-xs font-bold px-2 py-0.5 rounded-full">
+          ¡NUEVA ESPECIE!
+        </span>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 flex flex-col gap-4">
+        <div>
+          <h2 id="modal-title" class="text-2xl font-bold text-amber-400">Nombre del Ave</h2>
+          <p id="modal-scientific" class="text-xs italic text-slate-400">Nombre científico</p>
+        </div>
+
+        <p id="modal-desc" class="text-sm text-slate-300 leading-relaxed">
+          Descripción del ave local...
+        </p>
+
+        <!-- Reproductor de Audio / Canto -->
+        <div class="bg-slate-900 p-3 rounded-xl border border-slate-700 flex flex-col gap-2">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span><i class="fa-solid fa-music text-amber-400 mr-1"></i> Canto registrado</span>
+            <span id="audio-status">Listo para reproducir</span>
+          </div>
+          <audio id="modal-audio" controls class="w-full h-8"></audio>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="flex gap-2 pt-2">
+          <button onclick="speakDescription()" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-xl text-xs flex items-center justify-center gap-2 transition">
+            <i class="fa-solid fa-volume-high text-amber-400"></i> Escuchar Explicación
+          </button>
+          <button onclick="closeModal()" class="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition">
+            <i class="fa-solid fa-check"></i> Registrar en Lista
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- JavaScript -->
+  <script>
+    // Listado completo de las 22 especies con ruta .png
+    const BIRDS = [
+      { id: 'benteveo', name: 'Benteveo', sci: 'Pitangus sulphuratus', img: 'tarjetas/benteveo.png', audio: 'audios/benteveo.mp3', desc: 'Muy común en zonas arboladas. Se reconoce por su antifaz negro y vientre amarillo vibrante. Su canto suena a "bichoféo".' },
+      { id: 'cabecitanegra', name: 'Cabecitanegra', sci: 'Spinus magellanicus', img: 'tarjetas/cabecitanegra.png', audio: 'audios/cabecitanegra.mp3', desc: 'Pajarillo inquieto, con cabeza negra en los machos y plumaje amarillo verdoso.' },
+      { id: 'calandria-grande', name: 'Calandria Grande', sci: 'Mimus saturninus', img: 'tarjetas/calandria-grande.png', audio: 'audios/calandria-grande.mp3', desc: 'Gran imitadora de cantos de otras aves. Cola larga con puntas blancas y ceja clara.' },
+      { id: 'chimango', name: 'Chimango', sci: 'Milvago chimango', img: 'tarjetas/chimango.png', audio: 'audios/chimango.mp3', desc: 'Ave rapaz muy adaptada a campos y ciudades. Plumaje pardo con manchas claras en las alas.' },
+      { id: 'chingolo', name: 'Chingolo', sci: 'Zonotrichia capensis', img: 'tarjetas/chingolo.png', audio: 'audios/chingolo.mp3', desc: 'Pequeño y amigable, con un copete característico y collar castaño rojizo en el cuello.' },
+      { id: 'cotorra', name: 'Cotorra', sci: 'Myiopsitta monachus', img: 'tarjetas/cotorra.png', audio: 'audios/cotorra.mp3', desc: 'Verde brillante con pecho gris. Construye grandes nidos comunales de ramas.' },
+      { id: 'golondrina-parda', name: 'Golondrina Parda', sci: 'Progne tapera', img: 'tarjetas/golondrina-parda.png', audio: 'audios/golondrina-parda.mp3', desc: 'Suele ocupar nidos abandonados de horneros. Dorso pardo y vientre claro.' },
+      { id: 'golondrina-patagonica', name: 'Golondrina Patagónica', sci: 'Tachycineta leucopyga', img: 'tarjetas/golondrina-patagonica.png', audio: 'audios/golondrina-patagonica.png', desc: 'Dorso azul oscuro metalizado y rabadilla blanca muy visible en vuelo.' },
+      { id: 'golondrina-tijerita', name: 'Golondrina Tijerita', sci: 'Hirundo rustica', img: 'tarjetas/golondrina-tijerita.png', audio: 'audios/golondrina-tijerita.mp3', desc: 'Cola bifurcada muy profunda en forma de tijera. Migradora de largas distancias.' },
+      { id: 'gorrion', name: 'Gorrión', sci: 'Passer domesticus', img: 'tarjetas/gorrion.png', audio: 'audios/gorrion.mp3', desc: 'Especie introducida muy abundante en poblados y campos.' },
+      { id: 'hornero', name: 'Hornero', sci: 'Furnarius rufus', img: 'tarjetas/hornero.png', audio: 'audios/hornero.mp3', desc: 'Ave nacional. Famoso por construir su nido de barro con forma de horno de barro.' },
+      { id: 'jguero-dorado', name: 'Jilguero Dorado', sci: 'Sicalis flaveola', img: 'tarjetas/jguero-dorado.png', audio: 'audios/jguero-dorado.mp3', desc: 'Macho de color amarillo brillante con frente anaranjada. Canto melodioso.' },
+      { id: 'loica', name: 'Loica', sci: 'Leistes loyca', img: 'tarjetas/loica.png', audio: 'audios/loica.mp3', desc: 'Muy llamativa por su pecho rojo intenso. Típica del monte y estepa patagónica.' },
+      { id: 'loro-barranquero', name: 'Loro Barranquero', sci: 'Cyanoliseus patagonus', img: 'tarjetas/loro-barranquero.png', audio: 'audios/loro-barranquero.mp3', desc: 'Gregario y ruidoso. Anida en galerías excavadas en acantilados y barrancas de ríos.' },
+      { id: 'naranjero', name: 'Naranjero', sci: 'Rauenia bonariensis', img: 'tarjetas/naranjero.png', audio: 'audios/naranjero.mp3', desc: 'Macho con cabeza azul, espalda negra y vientre naranja encendido.' },
+      { id: 'paloma-manchada', name: 'Paloma Manchada', sci: 'Patagioenas maculosa', img: 'tarjetas/paloma-manchada.png', audio: 'audios/paloma-manchada.mp3', desc: 'Paloma grande con alas pecosas de manchas blancas.' },
+      { id: 'paloma-picazuro', name: 'Paloma Picazuro', sci: 'Patagioenas picazuro', img: 'tarjetas/paloma-picazuro.png', audio: 'audios/paloma-picazuro.mp3', desc: 'Paloma de gran tamaño con reflejos tornasolados en la nuca.' },
+      { id: 'ratona', name: 'Ratona Común', sci: 'Troglodytes aedon', img: 'tarjetas/ratona.png', audio: 'audios/ratona.mp3', desc: 'Inquieta y diminuta. Canta con potente volumen desde arbustos y tirantes.' },
+      { id: 'tero', name: 'Tero', sci: 'Vanellus chilensis', img: 'tarjetas/tero.png', audio: 'audios/tero.mp3', desc: 'Guardián del campo. Lanza gritos de alarma fuertes cuando cuida sus huevos en el suelo.' },
+      { id: 'torcaza', name: 'Torcaza', sci: 'Zenaida auriculata', img: 'tarjetas/torcaza.png', audio: 'audios/torcaza.mp3', desc: 'Palomita mediana muy común en campos y zonas urbanas.' },
+      { id: 'tordo-renegrido', name: 'Tordo Renegrido', sci: 'Molothrus bonariensis', img: 'tarjetas/tordo-renegrido.png', audio: 'audios/tordo-renegrido.mp3', desc: 'Macho plumaje negro con destellos violáceos. Pone sus huevos en nidos de otras aves.' },
+      { id: 'zorzal-patagonico', name: 'Zorzal Patagónico', sci: 'Turdus falcklandii', img: 'tarjetas/zorzal-patagonico.png', audio: 'audios/zorzal-patagonico.mp3', desc: 'Pico y patas amarillas. Canto variado que suele escucharse al amanecer y atardecer.' }
+    ];
+
+    let discoveredBirds = new Set(JSON.parse(localStorage.getItem('discovered_birds') || '[]'));
+    let html5QrcodeScanner = null;
+    let currentActiveBird = null;
+
+    // Inicializar App
+    document.addEventListener('DOMContentLoaded', () => {
+      populateSelector();
+      renderAlbum();
+    });
+
+    function populateSelector() {
+      const select = document.getElementById('bird-selector');
+      BIRDS.forEach(bird => {
+        const opt = document.createElement('option');
+        opt.value = bird.id;
+        opt.textContent = `${bird.name} (${bird.sci})`;
+        select.appendChild(opt);
+      });
+    }
+
+    function renderAlbum() {
+      const grid = document.getElementById('birds-grid');
+      const counter = document.getElementById('album-counter');
+      grid.innerHTML = '';
+      counter.textContent = discoveredBirds.size;
+
+      BIRDS.forEach(bird => {
+        const isFound = discoveredBirds.has(bird.id);
+        const card = document.createElement('div');
+        card.onclick = () => showBirdModal(bird.id);
+        card.className = `p-3 rounded-xl border flex flex-col items-center gap-2 cursor-pointer transition ${
+          isFound 
+            ? 'bg-slate-800 border-amber-500/50 hover:border-amber-400' 
+            : 'bg-slate-900 border-slate-800 opacity-60 hover:opacity-100'
+        }`;
+
+        card.innerHTML = `
+          <div class="w-full aspect-square bg-slate-950 rounded-lg overflow-hidden flex items-center justify-center p-1 relative">
+            <img src="${bird.img}" alt="${bird.name}" class="w-full h-full object-contain ${isFound ? '' : 'grayscale'}">
+            ${isFound ? '<i class="fa-solid fa-circle-check absolute top-1 right-1 text-amber-400 text-xs"></i>' : ''}
+          </div>
+          <div class="text-center">
+            <h4 class="text-xs font-bold ${isFound ? 'text-amber-400' : 'text-slate-400'}">${bird.name}</h4>
+            <p class="text-[10px] text-slate-500 italic">${bird.sci}</p>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // Iniciar Lector de Cámara
+    function startCamera() {
+      document.getElementById('start-cam-overlay').classList.add('hidden');
+      
+      html5QrcodeScanner = new Html5Qrcode("reader");
+      html5QrcodeScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          // Si el texto leído coincide con un ID o contiene la palabra
+          const found = BIRDS.find(b => decodedText.toLowerCase().includes(b.id));
+          if (found) {
+            showBirdModal(found.id);
+          }
+        },
+        (errorMessage) => {
+          // Error de lectura normal entre frames
         }
+      ).catch(err => {
+        alert("No se pudo iniciar la cámara. Asegurate de dar permisos HTTPS.");
+      });
+    }
 
-        function populateManualSelect() {
-            const select = document.getElementById('manual-bird-select');
-            select.innerHTML = '<option value="">-- Selección Manual de Tarjeta --</option>' + 
-                birdSpecies.map((b, idx) => `<option value="${b.id}">${idx + 1}. ${b.name} (${b.id})</option>`).join('');
-        }
+    function selectBirdManual(id) {
+      if (!id) return;
+      showBirdModal(id);
+      document.getElementById('bird-selector').value = "";
+    }
 
-        function updateSightingCard(index) {
-            activeBirdIndex = index;
-            const b = birdSpecies[index];
-            document.getElementById('hud-bird-thumb').src = b.image;
-            document.getElementById('hud-bird-name').innerText = b.name;
-            document.getElementById('hud-bird-sub').innerText = `${b.scientific} • Código: AVE-${b.id}`;
+    function showBirdModal(birdId) {
+      const bird = BIRDS.find(b => b.id === birdId);
+      if (!bird) return;
 
-            // Auto-unlock upon scan
-            if (!unlockedSightings.includes(b.id)) {
-                unlockedSightings.push(b.id);
-                localStorage.setItem('ecoaves_v2_sightings', JSON.stringify(unlockedSightings));
-                renderAlbumGrid();
-            }
-        }
+      currentActiveBird = bird;
+      discoveredBirds.add(bird.id);
+      localStorage.setItem('discovered_birds', JSON.stringify(Array.from(discoveredBirds)));
+      renderAlbum();
 
-        // CAMERA & REALTIME SCANNER CONTROLLER (jsQR Integration)
-        async function toggleCamera() {
-            const video = document.getElementById('camera-feed');
-            const fallback = document.getElementById('camera-fallback');
-            const btn = document.getElementById('cam-toggle-btn');
+      document.getElementById('modal-img').src = bird.img;
+      document.getElementById('modal-title').textContent = bird.name;
+      document.getElementById('modal-scientific').textContent = bird.sci;
+      document.getElementById('modal-desc').textContent = bird.desc;
 
-            if (!isCameraActive) {
-                try {
-                    videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                    video.srcObject = videoStream;
-                    video.classList.remove('hidden');
-                    fallback.classList.add('hidden');
-                    isCameraActive = true;
-                    btn.innerHTML = `<i class="fa-solid fa-video-slash mr-1.5"></i> Apagar Cámara`;
-                    btn.classList.replace('bg-patagonia-700', 'bg-red-600');
-                    requestAnimationFrame(scanQRCodeFrame);
-                } catch (e) {
-                    alert('No se pudo acceder a la cámara. Revisa los permisos de tu navegador.');
-                }
-            } else {
-                if (videoStream) videoStream.getTracks().forEach(t => t.stop());
-                if (scanAnimFrame) cancelAnimationFrame(scanAnimFrame);
-                video.classList.add('hidden');
-                fallback.classList.remove('hidden');
-                isCameraActive = false;
-                btn.innerHTML = `<i class="fa-solid fa-camera mr-1.5"></i> Activar Cámara`;
-                btn.classList.replace('bg-red-600', 'bg-patagonia-700');
-            }
-        }
+      const audio = document.getElementById('modal-audio');
+      audio.src = bird.audio;
+      audio.load();
 
-        function scanQRCodeFrame() {
-            if (!isCameraActive) return;
+      // Confetti al descubrir
+      confetti({ particleCount: 40, spread: 60, origin: { y: 0.7 } });
 
-            const video = document.getElementById('camera-feed');
-            const canvas = document.getElementById('qr-canvas');
-            const ctx = canvas.getContext('ctx2d' || '2d');
+      document.getElementById('bird-modal').classList.remove('hidden');
+    }
 
-            if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                canvas.height = video.videoHeight;
-                canvas.width = video.videoWidth;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                    inversionAttempts: "dontInvert",
-                });
+    function closeModal() {
+      document.getElementById('bird-modal').classList.add('hidden');
+      const audio = document.getElementById('modal-audio');
+      audio.pause();
+      window.speechSynthesis.cancel();
+    }
 
-                if (code && code.data) {
-                    processDetectedCode(code.data);
-                }
-            }
-            scanAnimFrame = requestAnimationFrame(scanQRCodeFrame);
-        }
+    function speakDescription() {
+      if (!currentActiveBird) return;
+      window.speechSynthesis.cancel();
+      const text = `${currentActiveBird.name}. ${currentActiveBird.desc}`;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'es-AR';
+      window.speechSynthesis.speak(utterance);
+    }
 
-        function processDetectedCode(data) {
-            // Expected QR content format: 'AVE-benteveo' or simply 'benteveo'
-            const cleanId = data.replace('AVE-', '').trim().toLowerCase();
-            const foundIndex = birdSpecies.findIndex(b => b.id.toLowerCase() === cleanId);
-            
-            if (foundIndex !== -1 && foundIndex !== activeBirdIndex) {
-                updateSightingCard(foundIndex);
-                document.getElementById('hud-status').innerHTML = `<i class="fa-solid fa-check text-emerald-400 mr-1"></i> DETECTADO: ${birdSpecies[foundIndex].name}`;
-                playActiveBirdAudio();
-            }
-        }
+    function switchTab(tab) {
+      const cameraTab = document.getElementById('tab-camera');
+      const albumTab = document.getElementById('tab-album');
+      const btnCam = document.getElementById('btn-camera-tab');
+      const btnAlb = document.getElementById('btn-album-tab');
 
-        function manualDetectBird(birdId) {
-            if (!birdId) return;
-            const foundIndex = birdSpecies.findIndex(b => b.id === birdId);
-            if (foundIndex !== -1) {
-                updateSightingCard(foundIndex);
-                playActiveBirdAudio();
-            }
-        }
-
-        // BIRD AUDIO SYNTHESIZER / SOUND ENGINE
-        function playActiveBirdAudio() {
-            const bird = birdSpecies[activeBirdIndex];
-            if (!bird) return;
-
-            // Audio Synthesis (Web Audio API) simulating bird chirps/calls + speech
-            const AudioCtx = window.AudioContext || window.webkitAudioContext;
-            if (AudioCtx) {
-                const ctx = new AudioCtx();
-                const now = ctx.currentTime;
-
-                // Create synthesized bird call oscillator rhythm
-                for (let i = 0; i < 4; i++) {
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.type = 'sine';
-                    
-                    // Pitch variations depending on species index
-                    const baseFreq = 1800 + (activeBirdIndex * 80) % 2000;
-                    osc.frequency.setValueAtTime(baseFreq, now + i * 0.25);
-                    osc.frequency.exponentialRampToValueAtTime(baseFreq + 600, now + i * 0.25 + 0.12);
-
-                    gain.gain.setValueAtTime(0.01, now + i * 0.25);
-                    gain.gain.linearRampToValueAtTime(0.2, now + i * 0.25 + 0.05);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.25 + 0.2);
-
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-
-                    osc.start(now + i * 0.25);
-                    osc.stop(now + i * 0.25 + 0.22);
-                }
-            }
-
-            // Also trigger speech audio readout
-            speakText(`Canto de ${bird.name}`);
-        }
-
-        function speakActiveBird() {
-            const bird = birdSpecies[activeBirdIndex];
-            if (bird) {
-                speakText(`${bird.name}. Nombre científico: ${bird.scientific}. ${bird.desc}`);
-            }
-        }
-
-        function speakText(text) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'es-AR';
-                utterance.rate = 0.95;
-                window.speechSynthesis.speak(utterance);
-            }
-        }
-
-        // RENDER ALBUM
-        function renderAlbumGrid() {
-            const grid = document.getElementById('species-grid');
-            const unlockedCount = unlockedSightings.length;
-            
-            document.getElementById('album-badge').innerText = `${unlockedCount}/22`;
-            document.getElementById('album-progress-text').innerText = `${unlockedCount} / 22 Avistadas`;
-
-            grid.innerHTML = birdSpecies.map((b, idx) => {
-                const isUnlocked = unlockedSightings.includes(b.id);
-                return `
-                    <div class="bg-slate-800/90 rounded-2xl overflow-hidden border ${isUnlocked ? 'border-emerald-500/60 shadow-lg' : 'border-slate-700/60 opacity-60'} flex flex-col justify-between">
-                        <div class="relative h-40">
-                            <img src="${b.image}" class="w-full h-full object-cover ${isUnlocked ? '' : 'grayscale'}">
-                            <span class="absolute top-2 left-2 bg-slate-950/80 text-amber-400 font-extrabold text-[10px] px-2 py-0.5 rounded-md">
-                                #${idx + 1}
-                            </span>
-                            ${isUnlocked 
-                                ? `<span class="absolute top-2 right-2 bg-emerald-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full"><i class="fa-solid fa-check"></i> HALLADA</span>`
-                                : `<span class="absolute top-2 right-2 bg-slate-900/90 text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded-full">Bloqueada</span>`
-                            }
-                        </div>
-                        <div class="p-3.5 space-y-1">
-                            <h4 class="font-bold text-white text-sm">${b.name}</h4>
-                            <p class="text-[11px] text-slate-400 italic">${b.scientific}</p>
-                        </div>
-                        <div class="p-3 bg-slate-900/80 border-t border-slate-700/50 flex items-center gap-1.5">
-                            <button onclick="updateSightingCard(${idx}); openDetailModal();" class="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg transition">
-                                Ver Ficha
-                            </button>
-                            <button onclick="updateSightingCard(${idx}); playActiveBirdAudio();" class="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition">
-                                <i class="fa-solid fa-volume-high"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function resetSightings() {
-            if (confirm('¿Deseas reiniciar tu álbum de avistamientos?')) {
-                unlockedSightings = [];
-                localStorage.removeItem('ecoaves_v2_sightings');
-                renderAlbumGrid();
-            }
-        }
-
-        // PRINT STUDIO (PRINTABLE QR MARKERS FOR ALL 22 SPECIES)
-        function openPrintStudio() {
-            const printArea = document.getElementById('print-area');
-            printArea.innerHTML = birdSpecies.map((b, idx) => `
-                <div class="bg-white text-slate-900 p-4 rounded-2xl border-4 border-black text-center flex flex-col items-center justify-between">
-                    <div>
-                        <span class="text-[10px] font-extrabold bg-black text-amber-400 px-2 py-0.5 rounded uppercase">MARCADOR #0${idx+1}</span>
-                        <h4 class="font-extrabold text-lg mt-1 text-black">${b.name}</h4>
-                        <p class="text-[11px] italic text-slate-600">${b.scientific}</p>
-                    </div>
-
-                    <!-- High Contrast QR Code Visual Graphic -->
-                    <div class="my-3 p-3 bg-black rounded-xl text-white w-40 h-40 flex flex-col items-center justify-center border-4 border-amber-400">
-                        <i class="fa-solid fa-qrcode text-5xl text-amber-400 mb-1"></i>
-                        <span class="font-mono font-bold text-[10px] tracking-wider text-white">AVE-${b.id}</span>
-                    </div>
-
-                    <p class="text-[10px] text-slate-500 font-bold">EcoAves Monocular &bull; Escanear con la app</p>
-                </div>
-            `).join('');
-
-            document.getElementById('print-modal').classList.remove('hidden');
-        }
-
-        function closePrintStudio() {
-            document.getElementById('print-modal').classList.add('hidden');
-        }
-
-        function openDetailModal() {
-            const b = birdSpecies[activeBirdIndex];
-            document.getElementById('detail-img').src = b.image;
-            document.getElementById('detail-title').innerText = b.name;
-            document.getElementById('detail-scientific').innerText = b.scientific;
-            document.getElementById('detail-id').innerText = `AVE #${activeBirdIndex + 1}`;
-            document.getElementById('detail-desc').innerText = b.desc;
-            document.getElementById('detail-modal').classList.remove('hidden');
-        }
-
-        function closeDetailModal() {
-            document.getElementById('detail-modal').classList.add('hidden');
-        }
-    </script>
+      if (tab === 'camera') {
+        cameraTab.classList.remove('hidden');
+        albumTab.classList.add('hidden');
+        btnCam.className = "px-3 py-2 bg-amber-500 text-slate-900 font-semibold rounded-lg text-sm flex items-center gap-2";
+        btnAlb.className = "px-3 py-2 bg-slate-700 text-slate-200 font-semibold rounded-lg text-sm flex items-center gap-2";
+      } else {
+        cameraTab.classList.add('hidden');
+        albumTab.classList.remove('hidden');
+        btnAlb.className = "px-3 py-2 bg-amber-500 text-slate-900 font-semibold rounded-lg text-sm flex items-center gap-2";
+        btnCam.className = "px-3 py-2 bg-slate-700 text-slate-200 font-semibold rounded-lg text-sm flex items-center gap-2";
+      }
+    }
+  </script>
 </body>
 </html>
