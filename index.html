@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aves de Río Negro y Patagonia - Recorrido WebAR & Estaciones</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        patagonia: {
+                            50: '#f4f7f5',
+                            100: '#e3ebd3',
+                            200: '#c5d7aa',
+                            500: '#688b48',
+                            700: '#3d5926',
+                            800: '#2b3e1b',
+                            900: '#1a2611',
+                        },
+                        earth: {
+                            100: '#f7f4ef',
+                            300: '#e2d4be',
+                            600: '#9e7950',
+                            800: '#5c4328',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .binocular-overlay {
+            background: radial-gradient(circle at 50% 50%, transparent 45%, rgba(15, 23, 42, 0.88) 55%);
+        }
+
+        .pulse-ring {
+            box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+            animation: pulse 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
+        }
+        @keyframes pulse {
+            to { box-shadow: 0 0 0 16px rgba(245, 158, 11, 0); }
+        }
+
+        /* Printable setup */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #print-markers-area, #print-markers-area * {
+                visibility: visible;
+            }
+            #print-markers-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body class="bg-patagonia-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
+
+    <!-- NAV HEADER -->
+    <header class="bg-patagonia-800 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('trail')">
+                <div class="bg-amber-500 text-slate-900 p-2 rounded-xl flex items-center justify-center shadow">
+                    <i class="fa-solid fa-route text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base sm:text-lg leading-tight">EcoAves Sendero AR</h1>
+                    <p class="text-[11px] text-patagonia-200">Recorrido por Estaciones de Avistamiento</p>
+                </div>
+            </div>
+
+            <nav class="flex items-center space-x-1 sm:space-x-3">
+                <button onclick="switchTab('trail')" id="nav-trail" class="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-patagonia-700 text-white shadow-sm">
+                    <i class="fa-solid fa-map-location-dot mr-1"></i> Sendero
+                </button>
+                <button onclick="switchTab('scanner')" id="nav-scanner" class="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all hover:bg-patagonia-700/60 text-patagonia-100">
+                    <i class="fa-solid fa-camera text-amber-400 mr-1"></i> Escáner AR
+                </button>
+                <button onclick="switchTab('life-list')" id="nav-life-list" class="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all hover:bg-patagonia-700/60 text-patagonia-100 flex items-center">
+                    <i class="fa-solid fa-book-bookmark text-emerald-400 mr-1"></i>
+                    <span>Álbum</span>
+                    <span id="badge-seen-count" class="ml-1 bg-amber-500 text-slate-900 text-[10px] font-bold px-1.5 py-0.2 rounded-full">0/6</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- TAB 1: RECORRIDO Y MAPA DE ESTACIONES -->
+        <section id="tab-trail" class="space-y-6">
+            
+            <!-- Hero Banner -->
+            <div class="bg-gradient-to-r from-patagonia-900 via-patagonia-800 to-earth-800 text-white rounded-2xl p-6 shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="max-w-2xl">
+                    <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 rounded-full text-xs font-bold uppercase mb-2 border border-amber-500/30">
+                        Sendero de Interpretación Aviar
+                    </span>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">
+                        Estaciones de Avistamiento AR
+                    </h2>
+                    <p class="text-patagonia-100 text-xs sm:text-sm leading-relaxed">
+                        Recorre el espacio físico buscando las placas y postes con marcadores QR. Escanéalos con la cámara para descubrir el ave oculta en Realidad Aumentada, escuchar su canto y sumarla a tu lista de vida.
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="openPrintModal()" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-xl text-xs shadow transition flex items-center">
+                        <i class="fa-solid fa-print mr-2"></i> Imprimir Marcadores
+                    </button>
+                    <button onclick="openAddModal()" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-xs border border-white/30 backdrop-blur-md transition flex items-center">
+                        <i class="fa-solid fa-plus mr-2"></i> Nueva Estación
+                    </button>
+                </div>
+            </div>
+
+            <!-- Estaciones Grid -->
+            <div>
+                <h3 class="text-lg font-bold text-slate-800 mb-3 flex items-center">
+                    <i class="fa-solid fa-location-dot text-patagonia-600 mr-2"></i> Estaciones del Recorrido
+                </h3>
+                <div id="stations-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Dynamic rendering via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: ESCÁNER / VISOR WEBAR -->
+        <section id="tab-scanner" class="hidden space-y-4">
+            
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-camera text-patagonia-600 mr-2"></i> Escáner de Campo AR
+                    </h2>
+                    <p class="text-xs text-slate-500">
+                        Apunta tu cámara hacia el marcador de la estación o selecciona una estación abajo para simular el hallazgo.
+                    </p>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <button id="cam-btn" onclick="toggleWebcam()" class="px-3 py-2 bg-patagonia-700 hover:bg-patagonia-800 text-white font-bold rounded-lg text-xs transition">
+                        <i class="fa-solid fa-video mr-1"></i> Encender Cámara
+                    </button>
+                    <select id="ar-station-select" onchange="selectStationForAR(this.value)" class="px-3 py-2 bg-slate-100 border border-slate-300 text-slate-800 font-semibold rounded-lg text-xs focus:ring-2 focus:ring-amber-500">
+                        <!-- Options generated dynamically -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- AR Camera Viewport -->
+            <div class="relative w-full h-[520px] bg-slate-950 rounded-2xl overflow-hidden shadow-2xl border-4 border-slate-800 flex items-center justify-center">
+                
+                <video id="webcam-feed" class="absolute inset-0 w-full h-full object-cover hidden" autoplay playsinline muted></video>
+
+                <!-- Simulating Environmental Sky View -->
+                <div id="ar-fallback-bg" class="absolute inset-0 bg-gradient-to-b from-sky-400 via-emerald-100 to-amber-50 flex items-center justify-center">
+                    <div class="text-center p-6 bg-slate-900/70 backdrop-blur-md rounded-2xl text-white max-w-sm z-10 border border-white/20">
+                        <i class="fa-solid fa-qrcode text-4xl text-amber-400 mb-3 animate-bounce"></i>
+                        <h4 class="font-bold text-base mb-1">Escáner Listo</h4>
+                        <p class="text-xs text-slate-300 mb-4">Activa la cámara frontal/trasera para escanear en terreno o usa el selector superior para enfocar un marcador.</p>
+                        <button onclick="toggleWebcam()" class="px-4 py-2 bg-amber-500 text-slate-900 font-bold rounded-lg text-xs hover:bg-amber-600 transition">
+                            Activar Cámara
+                        </button>
+                    </div>
+                </div>
+
+                <!-- HUD Reticle -->
+                <div class="absolute inset-0 pointer-events-none binocular-overlay z-10 flex flex-col justify-between p-4 sm:p-6">
+                    <div class="flex justify-between items-center text-emerald-400 text-[11px] font-mono tracking-wider bg-slate-900/60 p-2 rounded border border-emerald-500/20">
+                        <span><i class="fa-solid fa-satellite mr-1"></i> ESTACIÓN SELECCIONADA: <strong id="hud-station-code" class="text-amber-400">EST-01</strong></span>
+                        <span class="animate-pulse"><i class="fa-solid fa-circle text-red-500 text-[8px] mr-1"></i> RECONOCIENDO</span>
+                    </div>
+
+                    <!-- Target reticle frame -->
+                    <div class="self-center my-auto relative w-48 h-48 border-2 border-dashed border-amber-400/80 rounded-2xl flex items-center justify-center">
+                        <div class="w-3 h-3 bg-amber-400 rounded-full"></div>
+                        <div class="absolute -top-3 -left-3 w-6 h-6 border-t-4 border-l-4 border-amber-400"></div>
+                        <div class="absolute -top-3 -right-3 w-6 h-6 border-t-4 border-r-4 border-amber-400"></div>
+                        <div class="absolute -bottom-3 -left-3 w-6 h-6 border-b-4 border-l-4 border-amber-400"></div>
+                        <div class="absolute -bottom-3 -right-3 w-6 h-6 border-b-4 border-r-4 border-amber-400"></div>
+                    </div>
+
+                    <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700 backdrop-blur-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                        <div>
+                            <p class="text-amber-400 font-bold text-xs" id="hud-bird-name">Cardenal Amarillo</p>
+                            <p class="text-[11px] text-slate-300" id="hud-bird-sub">Marcador reconocido &bull; Canto activo</p>
+                        </div>
+                        <button id="btn-register-sighting" onclick="registerSightingFromAR()" class="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow transition flex items-center justify-center">
+                            <i class="fa-solid fa-circle-check mr-1.5"></i> Registrar Avistamiento
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dynamic Augmented Reality Entity (Overlaid Bird) -->
+                <div id="ar-bird-entity" class="absolute z-20 cursor-pointer transition-all duration-500 flex flex-col items-center group" style="top: 30%; left: 42%;" onclick="playCurrentARAudio()">
+                    <div class="relative">
+                        <div class="absolute -top-3 -right-3 w-8 h-8 bg-amber-500 rounded-full pulse-ring flex items-center justify-center text-slate-900 text-xs font-bold shadow-lg">
+                            <i class="fa-solid fa-volume-high"></i>
+                        </div>
+                        <img id="ar-bird-img" src="" alt="Ave AR" class="w-36 h-36 sm:w-44 sm:h-44 object-cover rounded-full border-4 border-amber-400 shadow-2xl transform group-hover:scale-105 transition">
+                    </div>
+                    <div class="mt-2 bg-slate-900/95 text-white text-xs px-3 py-1 rounded-full font-bold shadow-lg border border-amber-400 flex items-center space-x-1.5">
+                        <span id="ar-bird-label">Ave</span>
+                        <i class="fa-solid fa-headphones text-amber-400"></i>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Controls footer -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <button onclick="playCurrentARAudio()" class="p-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl text-center shadow-sm font-semibold text-emerald-800 text-xs transition">
+                    <i class="fa-solid fa-music text-emerald-600 text-base mb-1 block"></i>
+                    Reproducir Canto
+                </button>
+                <button onclick="speakARBirdDetails()" class="p-3 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl text-center shadow-sm font-semibold text-sky-800 text-xs transition">
+                    <i class="fa-solid fa-bullhorn text-sky-600 text-base mb-1 block"></i>
+                    Relato TTS (Voz)
+                </button>
+                <button onclick="showCurrentModal()" class="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-center shadow-sm font-semibold text-slate-700 text-xs transition">
+                    <i class="fa-solid fa-file-lines text-patagonia-600 text-base mb-1 block"></i>
+                    Ver Ficha Técnica
+                </button>
+                <button onclick="registerSightingFromAR()" class="p-3 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl text-center shadow font-bold text-xs transition">
+                    <i class="fa-solid fa-bookmark text-base mb-1 block"></i>
+                    Guardar en Álbum
+                </button>
+            </div>
+
+        </section>
+
+        <!-- TAB 3: LIFE LIST / ÁLBUM DE AVISTAMIENTOS -->
+        <section id="tab-life-list" class="hidden space-y-6">
+            
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-book-bookmark text-emerald-600 mr-2"></i> Mi Lista de Vida de Campo
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-500">
+                        Aves avistadas y desbloqueadas durante tu recorrido por el sendero.
+                    </p>
+                </div>
+                
+                <div class="bg-patagonia-50 border border-patagonia-200 px-4 py-3 rounded-xl flex items-center space-x-4">
+                    <div>
+                        <span class="text-xs text-slate-500 block font-semibold">Progreso del Sendero</span>
+                        <span id="lifelist-progress-text" class="text-lg font-extrabold text-patagonia-800">0 de 6 halladas</span>
+                    </div>
+                    <div class="w-12 h-12 rounded-full bg-patagonia-700 text-amber-400 font-extrabold text-sm flex items-center justify-center shadow" id="lifelist-percentage">
+                        0%
+                    </div>
+                </div>
+            </div>
+
+            <!-- Album Grid -->
+            <div id="life-list-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Dynamic Content -->
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- PRINT MARKERS MODAL -->
+    <div id="print-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative">
+            <button onclick="closePrintModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            
+            <div class="flex justify-between items-center mb-4 pr-8">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-800">Marcadores para Imprimir</h3>
+                    <p class="text-xs text-slate-500">Recorta e instala cada marcador en el poste o árbol correspondiente de cada estación.</p>
+                </div>
+                <button onclick="window.print()" class="px-4 py-2 bg-patagonia-700 hover:bg-patagonia-800 text-white text-xs font-bold rounded-lg shadow transition">
+                    <i class="fa-solid fa-print mr-1"></i> Imprimir Todo
+                </button>
+            </div>
+
+            <!-- Printable Grid Area -->
+            <div id="print-markers-area" class="grid grid-cols-2 gap-4 border-t border-slate-200 pt-4">
+                <!-- Generated markers -->
+            </div>
+        </div>
+    </div>
+
+    <!-- BIRD DETAIL MODAL -->
+    <div id="bird-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
+            <button onclick="closeBirdModal()" class="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 text-slate-700 w-9 h-9 rounded-full flex items-center justify-center z-10 transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <div class="relative h-60 w-full overflow-hidden">
+                <img id="modal-img" src="" alt="Ave" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent"></div>
+                <div class="absolute bottom-4 left-6 right-6 text-white">
+                    <span id="modal-station-tag" class="px-2.5 py-0.5 bg-amber-500 text-slate-900 rounded text-xs font-bold mr-2">
+                        Estación
+                    </span>
+                    <h3 id="modal-title" class="text-2xl font-extrabold mt-1">Nombre</h3>
+                    <p id="modal-scientific" class="text-slate-300 italic text-xs">Nombre científico</p>
+                </div>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <div class="bg-patagonia-50 p-3 rounded-xl border border-patagonia-200">
+                    <span class="text-xs font-bold text-patagonia-800 uppercase tracking-wider block mb-2">
+                        <i class="fa-solid fa-volume-high mr-1"></i> Canto Registrado
+                    </span>
+                    <audio id="modal-audio-element" class="w-full" controls></audio>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-slate-800 text-sm mb-1">Descripción</h4>
+                    <p id="modal-desc" class="text-slate-600 text-xs leading-relaxed"></p>
+                </div>
+
+                <div class="flex gap-2 pt-2 border-t border-slate-100">
+                    <button id="modal-tts-btn" onclick="speakCurrentModal()" class="flex-1 py-2.5 px-4 bg-patagonia-700 hover:bg-patagonia-800 text-white rounded-xl font-bold text-xs transition">
+                        <i class="fa-solid fa-volume-high mr-1"></i> Escuchar TTS
+                    </button>
+                    <button onclick="closeBirdModal(); switchTab('scanner');" class="flex-1 py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-slate-900 rounded-xl font-bold text-xs transition">
+                        <i class="fa-solid fa-binoculars mr-1"></i> Ver en Visor AR
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD STATION MODAL -->
+    <div id="add-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <button onclick="closeAddModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 class="text-xl font-bold text-slate-800 mb-1">Añadir Estación de Avistamiento</h3>
+            <p class="text-xs text-slate-500 mb-4">Vincula un ave local con una nueva estación en el mapa/sendero.</p>
+
+            <form id="add-bird-form" onsubmit="handleAddBird(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Nombre de la Estación / Ubicación</label>
+                    <input type="text" id="new-station" required placeholder="Ej: Estación 07 - El Cañadón" class="w-full px-3 py-2 border rounded-lg">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Nombre del Ave</label>
+                    <input type="text" id="new-name" required placeholder="Ej: Calandria Patagónica" class="w-full px-3 py-2 border rounded-lg">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Nombre Científico</label>
+                    <input type="text" id="new-scientific" required placeholder="Ej: Mimus patagonicus" class="w-full px-3 py-2 border rounded-lg">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">URL Ilustración</label>
+                    <input type="url" id="new-image" required placeholder="https://..." class="w-full px-3 py-2 border rounded-lg">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">URL Audio del Canto</label>
+                    <input type="url" id="new-audio" required placeholder="https://... mp3" class="w-full px-3 py-2 border rounded-lg">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Descripción</label>
+                    <textarea id="new-desc" rows="2" required placeholder="Breve reseña..." class="w-full px-3 py-2 border rounded-lg"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-2">
+                    <button type="button" onclick="closeAddModal()" class="px-3 py-2 border rounded-lg text-slate-600">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-patagonia-700 text-white font-bold rounded-lg shadow">Guardar Estación</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // Stations & Local Bird Database
+        const initialStations = [
+            {
+                id: 'est-01',
+                stationName: 'Estación 01 - Monte del Viento',
+                name: 'Cardenal Amarillo',
+                scientific: 'Gubernatrix cristata',
+                image: 'https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=700&q=80',
+                audio: 'https://cdn.freesound.org/previews/510/510921_10803923-lq.mp3',
+                habitat: 'Monte Espinal',
+                desc: 'Ave amenazada de copete negro y plumaje amarillo. Posee un silbido melódico inconfundible.'
+            },
+            {
+                id: 'est-02',
+                stationName: 'Estación 02 - Pastizal Sur',
+                name: 'Loica Común',
+                scientific: 'Leistes loyca',
+                image: 'https://images.unsplash.com/photo-1520808663317-647b476a81b9?auto=format&fit=crop&w=700&q=80',
+                audio: 'https://cdn.freesound.org/previews/563/563032_11861866-lq.mp3',
+                habitat: 'Pastizal Rural',
+                desc: 'Inconfundible por su brillante pecho rojo. Posada habitual en postes de alambrado.'
+            },
+            {
+                id: 'est-03',
+                stationName: 'Estación 03 - Humedal de la Salina',
+                name: 'Flamenco Austral',
+                scientific: 'Phoenicopterus chilensis',
+                image: 'https://images.unsplash.com/photo-1539664030488-bed650c33a92?auto=format&fit=crop&w=700&q=80',
+                audio: 'https://cdn.freesound.org/previews/459/459992_9497060-lq.mp3',
+                habitat: 'Lagunas Salobres',
+                desc: 'Esbelta ave de plumaje rosado que filtra pequeños crustáceos en aguas someras.'
+            },
+            {
+                id: 'est-04',
+                stationName: 'Estación 04 - Meseta Abierta',
+                name: 'Choique',
+                scientific: 'Rhea pennata',
+                image: 'https://images.unsplash.com/photo-1544985397-124e397558ec?auto=format&fit=crop&w=700&q=80',
+                audio: 'https://cdn.freesound.org/previews/416/416529_5121236-lq.mp3',
+                habitat: 'Estepa Patagónica',
+                desc: 'Gran ave corredora adaptada a las frías estepas. Emite graves bramidos para comunicarse.'
+            },
+            {
+                id: 'est-05',
+                stationName: 'Estación 05 - Bosque de Cañadón',
+                name: 'Tucúquere',
+                scientific: 'Bubo magellanicus',
+                image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=700&q=80',
+                audio: 'https://cdn.freesound.org/previews/456/456781_5121236-lq.mp3',
+                habitat: 'Cañadones y Bosques',
+                desc: 'Búho nocturno de plumaje camuflado y penachos en la cabeza. Su ulular retumba en la noche.'
+            },
+            {
+                id: 'est-06',
+                stationName: 'Estación 06 - Matorral de Arbustos',
+                name: 'Martineta Copetona',
+                scientific: 'Eudromia elegans',
+                image: 'https://images.unsplash.com/photo-1618218168350-6e7c81151b64?auto=format&fit=crop&w=700&q=80',
+                audio: 'https://cdn.freesound.org/previews/612/612034_11861866-lq.mp3',
+                habitat: 'Matorrales Bajos',
+                desc: 'Especialista en camuflaje terrestre con un largo copete arqueado sobre su cabeza.'
+            }
+        ];
+
+        let stations = [...initialStations];
+        let sightings = JSON.parse(localStorage.getItem('ecoaves_sightings') || '[]');
+        let activeStationIndex = 0;
+        let isWebcamActive = false;
+        let webcamStream = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderStations();
+            renderLifeList();
+            populateARStationSelect();
+            updateARStationView();
+        });
+
+        // TAB SWITCHING
+        function switchTab(tabId) {
+            document.querySelectorAll('main > section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            ['trail', 'scanner', 'life-list'].forEach(id => {
+                const nav = document.getElementById(`nav-${id}`);
+                if (id === tabId) {
+                    nav.className = "px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all bg-patagonia-700 text-white shadow-sm";
+                } else {
+                    nav.className = "px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all hover:bg-patagonia-700/60 text-patagonia-100";
+                }
+            });
+        }
+
+        // RENDER STATIONS ON MAP/TRAIL
+        function renderStations() {
+            const grid = document.getElementById('stations-grid');
+            grid.innerHTML = stations.map((st, idx) => {
+                const isSeen = sightings.includes(st.id);
+                return `
+                    <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 hover:shadow-md transition flex flex-col justify-between">
+                        <div class="p-5 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="px-2.5 py-1 rounded-md bg-patagonia-100 text-patagonia-800 text-xs font-bold">
+                                    ${st.stationName.split(' - ')[0]}
+                                </span>
+                                ${isSeen 
+                                    ? `<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-full flex items-center"><i class="fa-solid fa-check mr-1"></i> Avistada</span>`
+                                    : `<span class="px-2 py-0.5 bg-slate-100 text-slate-500 text-[11px] font-semibold rounded-full">Pendiente</span>`
+                                }
+                            </div>
+                            
+                            <h4 class="font-bold text-slate-800 text-base">${st.stationName.split(' - ')[1] || st.stationName}</h4>
+                            <div class="flex items-center space-x-3 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                <img src="${st.image}" class="w-12 h-12 rounded-lg object-cover">
+                                <div>
+                                    <h5 class="font-bold text-xs text-slate-800">${st.name}</h5>
+                                    <p class="text-[11px] text-slate-400 italic">${st.scientific}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center gap-2">
+                            <button onclick="selectStationForAR('${st.id}'); switchTab('scanner');" class="flex-1 py-2 px-3 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-xs rounded-lg shadow transition flex items-center justify-center">
+                                <i class="fa-solid fa-binoculars mr-1.5"></i> Escanear AR
+                            </button>
+                            <button onclick="openBirdModal('${st.id}')" class="py-2 px-3 bg-white border border-slate-300 text-slate-700 font-bold text-xs rounded-lg hover:bg-slate-100 transition">
+                                Ficha
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // RENDER LIFE LIST
+        function renderLifeList() {
+            const grid = document.getElementById('life-list-grid');
+            const seenCount = sightings.length;
+            const total = stations.length;
+            const percentage = Math.round((seenCount / (total || 1)) * 100);
+
+            document.getElementById('badge-seen-count').innerText = `${seenCount}/${total}`;
+            document.getElementById('lifelist-progress-text').innerText = `${seenCount} de ${total} halladas`;
+            document.getElementById('lifelist-percentage').innerText = `${percentage}%`;
+
+            grid.innerHTML = stations.map(st => {
+                const isSeen = sightings.includes(st.id);
+                return `
+                    <div class="bg-white rounded-2xl p-4 border ${isSeen ? 'border-emerald-300 shadow-sm' : 'border-slate-200 opacity-60'} flex items-center space-x-4">
+                        <div class="relative">
+                            <img src="${st.image}" class="w-16 h-16 rounded-xl object-cover ${isSeen ? '' : 'grayscale'}">
+                            ${isSeen ? `<div class="absolute -top-2 -right-2 bg-emerald-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px]"><i class="fa-solid fa-check"></i></div>` : ''}
+                        </div>
+                        <div class="flex-1">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase">${st.stationName}</span>
+                            <h4 class="font-bold text-sm text-slate-800">${st.name}</h4>
+                            <p class="text-[11px] text-slate-400 italic">${st.scientific}</p>
+                            ${isSeen 
+                                ? `<span class="inline-block mt-1 text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded">Registrado en Lista</span>` 
+                                : `<span class="inline-block mt-1 text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Pendiente de avistar</span>`}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // POPULATE AR SELECTOR
+        function populateARStationSelect() {
+            const select = document.getElementById('ar-station-select');
+            select.innerHTML = stations.map((st, idx) => `
+                <option value="${st.id}">${st.stationName}</option>
+            `).join('');
+        }
+
+        function selectStationForAR(id) {
+            const idx = stations.findIndex(s => s.id === id);
+            if (idx !== -1) {
+                activeStationIndex = idx;
+                document.getElementById('ar-station-select').value = id;
+                updateARStationView();
+            }
+        }
+
+        function updateARStationView() {
+            const st = stations[activeStationIndex];
+            if (!st) return;
+
+            document.getElementById('hud-station-code').innerText = st.stationName.split(' - ')[0];
+            document.getElementById('hud-bird-name').innerText = st.name;
+            document.getElementById('hud-bird-sub').innerText = `${st.habitat} • ${st.scientific}`;
+            
+            document.getElementById('ar-bird-img').src = st.image;
+            document.getElementById('ar-bird-label').innerText = st.name;
+
+            // Randomize spatial positioning inside AR frame
+            const birdEntity = document.getElementById('ar-bird-entity');
+            birdEntity.style.top = `${25 + Math.random() * 30}%`;
+            birdEntity.style.left = `${20 + Math.random() * 50}%`;
+        }
+
+        function playCurrentARAudio() {
+            const st = stations[activeStationIndex];
+            if (!st) return;
+            const sound = new Audio(st.audio);
+            sound.play().catch(e => console.log('Audio requires user click', e));
+        }
+
+        function speakARBirdDetails() {
+            const st = stations[activeStationIndex];
+            if (st) speakText(`Estación ${st.stationName}. Ave asignada: ${st.name}. ${st.desc}`);
+        }
+
+        function registerSightingFromAR() {
+            const st = stations[activeStationIndex];
+            if (!st) return;
+
+            if (!sightings.includes(st.id)) {
+                sightings.push(st.id);
+                localStorage.setItem('ecoaves_sightings', JSON.stringify(sightings));
+                renderStations();
+                renderLifeList();
+                alert(`¡Excelente avistamiento! Has añadido a "${st.name}" a tu Lista de Vida.`);
+            } else {
+                alert(`"${st.name}" ya estaba registrada en tu Lista de Vida.`);
+            }
+        }
+
+        // WEBCAM CONTROLLER
+        async function toggleWebcam() {
+            const video = document.getElementById('webcam-feed');
+            const fallbackBg = document.getElementById('ar-fallback-bg');
+            const btn = document.getElementById('cam-btn');
+
+            if (!isWebcamActive) {
+                try {
+                    webcamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                    video.srcObject = webcamStream;
+                    video.classList.remove('hidden');
+                    fallbackBg.classList.add('hidden');
+                    isWebcamActive = true;
+                    btn.innerHTML = `<i class="fa-solid fa-video-slash mr-1"></i> Apagar`;
+                    btn.classList.replace('bg-patagonia-700', 'bg-red-600');
+                } catch (err) {
+                    alert('No se pudo acceder a la cámara. Revisa las autorizaciones en tu celular.');
+                }
+            } else {
+                if (webcamStream) webcamStream.getTracks().forEach(t => t.stop());
+                video.classList.add('hidden');
+                fallbackBg.classList.remove('hidden');
+                isWebcamActive = false;
+                btn.innerHTML = `<i class="fa-solid fa-video mr-1"></i> Encender Cámara`;
+                btn.classList.replace('bg-red-600', 'bg-patagonia-700');
+            }
+        }
+
+        // PRINTABLE MARKERS MODAL
+        function openPrintModal() {
+            const printArea = document.getElementById('print-markers-area');
+            printArea.innerHTML = stations.map(st => `
+                <div class="border-2 border-slate-800 p-4 rounded-xl text-center flex flex-col items-center justify-between bg-white">
+                    <span class="text-xs font-bold uppercase text-slate-600 mb-1">${st.stationName}</span>
+                    <h4 class="font-extrabold text-slate-900 text-sm mb-2">${st.name}</h4>
+                    
+                    <!-- QR Marker graphic -->
+                    <div class="w-36 h-36 bg-black p-4 flex items-center justify-center my-2">
+                        <div class="w-full h-full bg-white border-4 border-black flex flex-col items-center justify-center">
+                            <span class="font-extrabold text-black text-xs">ESTACIÓN</span>
+                            <span class="font-black text-amber-600 text-sm">${st.id.toUpperCase()}</span>
+                        </div>
+                    </div>
+                    
+                    <p class="text-[10px] text-slate-500 mt-1">EcoAves Patagonia &bull; Escanear con la app</p>
+                </div>
+            `).join('');
+            
+            document.getElementById('print-modal').classList.remove('hidden');
+        }
+
+        function closePrintModal() {
+            document.getElementById('print-modal').classList.add('hidden');
+        }
+
+        // TTS ACCESSIBILITY
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'es-AR';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function openBirdModal(id) {
+            const st = stations.find(s => s.id === id);
+            if (!st) return;
+
+            document.getElementById('modal-img').src = st.image;
+            document.getElementById('modal-title').innerText = st.name;
+            document.getElementById('modal-scientific').innerText = st.scientific;
+            document.getElementById('modal-station-tag').innerText = st.stationName.split(' - ')[0];
+            document.getElementById('modal-desc').innerText = st.desc;
+            document.getElementById('modal-audio-element').src = st.audio;
+
+            document.getElementById('bird-modal').classList.remove('hidden');
+        }
+
+        function closeBirdModal() {
+            document.getElementById('bird-modal').classList.add('hidden');
+        }
+
+        function openAddModal() {
+            document.getElementById('add-modal').classList.remove('hidden');
+        }
+
+        function closeAddModal() {
+            document.getElementById('add-modal').classList.add('hidden');
+        }
+
+        function handleAddBird(e) {
+            e.preventDefault();
+            const newSt = {
+                id: 'est-' + Date.now(),
+                stationName: document.getElementById('new-station').value,
+                name: document.getElementById('new-name').value,
+                scientific: document.getElementById('new-scientific').value,
+                image: document.getElementById('new-image').value,
+                audio: document.getElementById('new-audio').value,
+                habitat: 'Estación Personalizada',
+                desc: document.getElementById('new-desc').value
+            };
+
+            stations.push(newSt);
+            renderStations();
+            renderLifeList();
+            populateARStationSelect();
+            closeAddModal();
+            alert(`¡Estación "${newSt.stationName}" añadida al sendero!`);
+        }
+    </script>
+</body>
+</html>
