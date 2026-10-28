@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aves Locales - Visor WebAR y Recorrido de Estaciones</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -46,20 +45,20 @@
   <!-- Main Content -->
   <main class="flex-1 relative flex flex-col items-center justify-center p-2 sm:p-4">
 
-    <!-- TAB 1: VISOR MONOCULAR DE CÁMARA / ESCÁNER -->
+    <!-- TAB 1: VISOR MONOCULAR DE CÁMARA -->
     <section id="tab-camera" class="w-full max-w-2xl flex flex-col items-center gap-4">
       
       <!-- Visor de la Cámara -->
       <div class="relative w-full aspect-[3/4] sm:aspect-video bg-black rounded-2xl overflow-hidden border-2 border-amber-500/40 shadow-2xl flex items-center justify-center">
         
-        <!-- Video Stream / QR Reader -->
-        <div id="reader" class="w-full h-full object-cover"></div>
+        <!-- Elemento de Video Nativo -->
+        <video id="camera-video" autoplay playsinline muted class="w-full h-full object-cover"></video>
         
         <!-- Máscara / Visor Monocular -->
         <div class="absolute inset-0 pointer-events-none viewport-overlay flex flex-col justify-between p-4">
           <div class="flex justify-between items-start text-xs text-amber-400/80 font-mono">
             <div><i class="fa-solid fa-crosshairs"></i> VISOR MONOCULAR AR</div>
-            <div id="status-tag" class="bg-slate-900/80 px-2 py-1 rounded border border-amber-500/30">ESCANEAR TARJETA</div>
+            <div id="status-tag" class="bg-slate-900/80 px-2 py-1 rounded border border-amber-500/30">CÁMARA ACTIVA</div>
           </div>
 
           <!-- Línea de Escaneo Animada -->
@@ -67,28 +66,28 @@
 
           <div class="flex justify-between items-end text-xs text-amber-400/80 font-mono">
             <div>MODO: TARJETAS PNG</div>
-            <div>STATION SCANNER v2.0</div>
+            <div>STATION SCANNER v2.1</div>
           </div>
         </div>
 
-        <!-- Botón para Iniciar Cámara si no arrancó -->
-        <div id="start-cam-overlay" class="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center p-6 text-center gap-4 z-20">
+        <!-- Botón para Iniciar Cámara si el navegador lo requiere -->
+        <div id="start-cam-overlay" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center p-6 text-center gap-4 z-20">
           <i class="fa-solid fa-camera-rotate text-5xl text-amber-400 animate-bounce"></i>
           <h2 class="text-lg font-bold text-slate-200">Activar Visor Monocular</h2>
-          <p class="text-xs text-slate-400 max-w-xs">Permite el acceso a la cámara para identificar los marcadores de las aves en el recorrido.</p>
-          <button onclick="startCamera()" class="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl shadow-lg transition">
+          <p class="text-xs text-slate-400 max-w-xs">Permite el acceso a la cámara de tu celular para identificar las tarjetas en el recorrido.</p>
+          <button onclick="initCamera()" class="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl shadow-lg transition">
             Iniciar Cámara
           </button>
         </div>
       </div>
 
-      <!-- Selector Manual de Respaldo por si hay poca luz -->
+      <!-- Selector Manual de Respaldo -->
       <div class="w-full bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col gap-2">
         <label class="text-xs text-slate-400 font-semibold flex items-center gap-2">
-          <i class="fa-solid fa-hand-pointer text-amber-400"></i> ¿Dificultades para escanear? Seleccioná el ave manualmente:
+          <i class="fa-solid fa-hand-pointer text-amber-400"></i> Seleccioná el ave del recorrido para ver la ficha y escuchar su canto:
         </label>
         <select id="bird-selector" onchange="selectBirdManual(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500">
-          <option value="">-- Seleccionar especie de la lista --</option>
+          <option value="">-- Seleccionar especie --</option>
         </select>
       </div>
 
@@ -99,7 +98,7 @@
       <div class="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
         <div>
           <h2 class="text-lg font-bold text-amber-400">Progreso de Avistamiento</h2>
-          <p class="text-xs text-slate-400">Escaneá o seleccioná las tarjetas para completar tu lista.</p>
+          <p class="text-xs text-slate-400">Registrá las especies descubiertas en el recorrido.</p>
         </div>
         <div class="text-right">
           <span id="album-counter" class="text-2xl font-black text-amber-400">0</span>
@@ -126,7 +125,7 @@
           <i class="fa-solid fa-xmark"></i>
         </button>
         <span id="modal-tag" class="absolute bottom-3 left-3 bg-amber-500 text-slate-950 text-xs font-bold px-2 py-0.5 rounded-full">
-          ¡NUEVA ESPECIE!
+          ¡REGISTRADA!
         </span>
       </div>
 
@@ -156,7 +155,7 @@
             <i class="fa-solid fa-volume-high text-amber-400"></i> Escuchar Explicación
           </button>
           <button onclick="closeModal()" class="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition">
-            <i class="fa-solid fa-check"></i> Registrar en Lista
+            <i class="fa-solid fa-check"></i> Continuar Recorrido
           </button>
         </div>
       </div>
@@ -166,7 +165,6 @@
 
   <!-- JavaScript -->
   <script>
-    // Listado completo de las 22 especies con ruta .png
     const BIRDS = [
       { id: 'benteveo', name: 'Benteveo', sci: 'Pitangus sulphuratus', img: 'tarjetas/benteveo.png', audio: 'audios/benteveo.mp3', desc: 'Muy común en zonas arboladas. Se reconoce por su antifaz negro y vientre amarillo vibrante. Su canto suena a "bichoféo".' },
       { id: 'cabecitanegra', name: 'Cabecitanegra', sci: 'Spinus magellanicus', img: 'tarjetas/cabecitanegra.png', audio: 'audios/cabecitanegra.mp3', desc: 'Pajarillo inquieto, con cabeza negra en los machos y plumaje amarillo verdoso.' },
@@ -193,14 +191,32 @@
     ];
 
     let discoveredBirds = new Set(JSON.parse(localStorage.getItem('discovered_birds') || '[]'));
-    let html5QrcodeScanner = null;
     let currentActiveBird = null;
+    let mediaStream = null;
 
-    // Inicializar App
     document.addEventListener('DOMContentLoaded', () => {
       populateSelector();
       renderAlbum();
+      // Intentar iniciar la cámara automáticamente al cargar
+      initCamera();
     });
+
+    async function initCamera() {
+      const videoElement = document.getElementById('camera-video');
+      const overlay = document.getElementById('start-cam-overlay');
+      
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false
+        });
+        videoElement.srcObject = mediaStream;
+        overlay.classList.add('hidden');
+      } catch (err) {
+        console.warn("No se pudo acceder a la cámara automáticamente:", err);
+        overlay.classList.remove('hidden');
+      }
+    }
 
     function populateSelector() {
       const select = document.getElementById('bird-selector');
@@ -242,29 +258,6 @@
       });
     }
 
-    // Iniciar Lector de Cámara
-    function startCamera() {
-      document.getElementById('start-cam-overlay').classList.add('hidden');
-      
-      html5QrcodeScanner = new Html5Qrcode("reader");
-      html5QrcodeScanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          // Si el texto leído coincide con un ID o contiene la palabra
-          const found = BIRDS.find(b => decodedText.toLowerCase().includes(b.id));
-          if (found) {
-            showBirdModal(found.id);
-          }
-        },
-        (errorMessage) => {
-          // Error de lectura normal entre frames
-        }
-      ).catch(err => {
-        alert("No se pudo iniciar la cámara. Asegurate de dar permisos HTTPS.");
-      });
-    }
-
     function selectBirdManual(id) {
       if (!id) return;
       showBirdModal(id);
@@ -289,7 +282,6 @@
       audio.src = bird.audio;
       audio.load();
 
-      // Confetti al descubrir
       confetti({ particleCount: 40, spread: 60, origin: { y: 0.7 } });
 
       document.getElementById('bird-modal').classList.remove('hidden');
@@ -322,11 +314,16 @@
         albumTab.classList.add('hidden');
         btnCam.className = "px-3 py-2 bg-amber-500 text-slate-900 font-semibold rounded-lg text-sm flex items-center gap-2";
         btnAlb.className = "px-3 py-2 bg-slate-700 text-slate-200 font-semibold rounded-lg text-sm flex items-center gap-2";
+        initCamera();
       } else {
         cameraTab.classList.add('hidden');
         albumTab.classList.remove('hidden');
         btnAlb.className = "px-3 py-2 bg-amber-500 text-slate-900 font-semibold rounded-lg text-sm flex items-center gap-2";
         btnCam.className = "px-3 py-2 bg-slate-700 text-slate-200 font-semibold rounded-lg text-sm flex items-center gap-2";
+        // Apagar cámara si cambia de pestaña para ahorrar batería
+        if (mediaStream) {
+          mediaStream.getTracks().forEach(track => track.stop());
+        }
       }
     }
   </script>
